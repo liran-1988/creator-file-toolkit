@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://liran-1988.github.io/creator-file-toolkit/sitemap.xml
