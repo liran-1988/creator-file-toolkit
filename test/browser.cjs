@@ -239,6 +239,15 @@ async function createMetadataHeavyJpeg(page) {
       await mobilePage.close();
     }
 
+    for (const privacyPage of [
+      { path: "/privacy/", heading: "Privacy policy", lang: "en" },
+      { path: "/zh/privacy/", heading: "隐私政策", lang: "zh-CN" },
+    ]) {
+      await page.goto(`${baseUrl}${privacyPage.path}`, { waitUntil: "networkidle" });
+      await page.getByRole("heading", { name: privacyPage.heading }).waitFor();
+      assert.equal(await page.locator("html").getAttribute("lang"), privacyPage.lang);
+    }
+
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Try sample" }).click();
     await page.locator("#preview-image").waitFor({ state: "visible", timeout: 15000 });

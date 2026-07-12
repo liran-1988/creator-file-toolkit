@@ -87,12 +87,33 @@ test("English and Chinese pages use the verified AdSense account with accurate p
   ]);
   for (const html of [english, chinese]) {
     assert.match(html, /pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js\?client=ca-pub-1349340832655411/);
+    assert.match(html, /<script async src="https:\/\/pagead2/);
     assert.match(html, /crossorigin="anonymous"/);
+    assert.doesNotMatch(html, /<ins[^>]+adsbygoogle|data-ad-slot|adsbygoogle\.push/);
   }
   assert.doesNotMatch(english, /No tracking script/);
   assert.doesNotMatch(chinese, /没有跟踪脚本/);
   assert.match(english, /Advertising may be provided by Google/);
   assert.match(chinese, /广告可能由 Google 提供/);
+  assert.match(english, /href="privacy\/"/);
+  assert.match(chinese, /href="privacy\/"/);
+});
+
+test("repository documents AdSense and publishes bilingual privacy disclosures", async () => {
+  const [readme, englishPrivacy, chinesePrivacy, sitemap] = await Promise.all([
+    readProjectFile("README.md"),
+    readProjectFile("privacy/index.html"),
+    readProjectFile("zh/privacy/index.html"),
+    readProjectFile("sitemap.xml"),
+  ]);
+  assert.match(readme, /Google AdSense/i);
+  assert.doesNotMatch(readme, /no backend, account, upload endpoint, cloud storage, analytics, ads, cookies/i);
+  assert.match(englishPrivacy, /Google AdSense/);
+  assert.match(englishPrivacy, /cookies or similar technologies/i);
+  assert.match(chinesePrivacy, /Google AdSense/);
+  assert.match(chinesePrivacy, /Cookie 或类似技术/);
+  assert.match(sitemap, /https:\/\/liran-1988\.github\.io\/creator-file-toolkit\/privacy\//);
+  assert.match(sitemap, /https:\/\/liran-1988\.github\.io\/creator-file-toolkit\/zh\/privacy\//);
 });
 
 test("sitemap exposes both localized URLs and Search Console verification", async () => {

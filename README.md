@@ -11,7 +11,7 @@ Each route has its own canonical URL and reciprocal language metadata. The langu
 
 ## Privacy
 
-Images are processed locally in the browser with the Canvas API. The site has no backend, account, upload endpoint, cloud storage, analytics, ads, cookies, or remote image API.
+Images are processed locally in the browser with the Canvas API. The site has no backend, account, upload endpoint, cloud storage, or remote image API. It loads Google AdSense to support the free tools; Google and its partners may use cookies or similar technologies for advertising. See the published privacy pages at `/privacy/` and `/zh/privacy/`.
 
 ## Run Locally
 
