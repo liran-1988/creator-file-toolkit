@@ -297,10 +297,13 @@ async function createSampleFile() {
   canvas.width = TARGET_WIDTH;
   canvas.height = TARGET_HEIGHT;
   const context = canvas.getContext("2d", { alpha: false });
+  const scaleX = TARGET_WIDTH / 1280;
+  const scaleY = TARGET_HEIGHT / 720;
+  context.scale(scaleX, scaleY);
   context.fillStyle = "#111827";
-  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillRect(0, 0, 1280, 720);
   context.fillStyle = "#ef4444";
-  context.fillRect(0, 0, 34, canvas.height);
+  context.fillRect(0, 0, 34, 720);
   context.fillStyle = "#ffffff";
   context.font = "700 76px system-ui, sans-serif";
   context.fillText("MAKE IT CLEAR", 92, 290);

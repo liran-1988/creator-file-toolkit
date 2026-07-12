@@ -1,6 +1,6 @@
 export const YOUTUBE_THUMBNAIL_RULES = Object.freeze({
-  recommendedWidth: 1280,
-  recommendedHeight: 720,
+  recommendedWidth: 3840,
+  recommendedHeight: 2160,
   minimumWidth: 640,
   targetRatio: 16 / 9,
   ratioTolerance: 0.01,

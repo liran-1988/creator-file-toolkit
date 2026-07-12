@@ -22,7 +22,7 @@ const { chromium } = require("playwright");
 
     await page.getByRole("button", { name: "Fix & preview" }).click();
     await page.locator("#download-button:not([disabled])").waitFor({ timeout: 3000 });
-    assert.match(await page.locator("#corrected-value").textContent(), /1280 x 720/);
+    assert.match(await page.locator("#corrected-value").textContent(), /3840 x 2160/);
 
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download JPEG" }).click();

@@ -38,6 +38,7 @@ test("page describes local processing and approximate overlays", async () => {
   assert.match(html, /processed locally in your browser/i);
   assert.match(html, /approximate/i);
   assert.match(html, /support\.google\.com\/youtube\/answer\/72431/);
+  assert.match(html, /3840 x 2160/);
 });
 
 test("page has factual search metadata and local assets", async () => {

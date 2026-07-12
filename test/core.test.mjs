@@ -5,16 +5,18 @@ let validateThumbnail;
 let calculateCoverCrop;
 let calculateContainSize;
 let buildDownloadName;
+let actualRules;
 
 try {
   ({ validateThumbnail, calculateCoverCrop, calculateContainSize, buildDownloadName } = await import("../core.mjs"));
+  ({ YOUTUBE_THUMBNAIL_RULES: actualRules } = await import("../rules.mjs"));
 } catch {
   // The first RED run intentionally happens before the module exists.
 }
 
 const RULES = {
-  recommendedWidth: 1280,
-  recommendedHeight: 720,
+  recommendedWidth: 3840,
+  recommendedHeight: 2160,
   minimumWidth: 640,
   targetRatio: 16 / 9,
   ratioTolerance: 0.01,
@@ -26,7 +28,7 @@ test("accepts a recommended JPEG thumbnail under the file limit", () => {
   assert.equal(typeof validateThumbnail, "function");
 
   const result = validateThumbnail(
-    { width: 1280, height: 720, size: 900_000, type: "image/jpeg" },
+    { width: 3840, height: 2160, size: 900_000, type: "image/jpeg" },
     RULES,
   );
 
@@ -63,7 +65,7 @@ test("fails a file larger than the upload limit", () => {
   assert.equal(typeof validateThumbnail, "function");
 
   const result = validateThumbnail(
-    { width: 1280, height: 720, size: RULES.maximumBytes + 1, type: "image/png" },
+    { width: 3840, height: 2160, size: RULES.maximumBytes + 1, type: "image/png" },
     RULES,
   );
 
@@ -75,12 +77,26 @@ test("fails an unsupported WebP upload", () => {
   assert.equal(typeof validateThumbnail, "function");
 
   const result = validateThumbnail(
-    { width: 1280, height: 720, size: 300_000, type: "image/webp" },
+    { width: 3840, height: 2160, size: 300_000, type: "image/webp" },
     RULES,
   );
 
   assert.equal(result.status, "fail");
   assert.equal(result.checks.find((check) => check.id === "format").status, "fail");
+});
+
+test("uses the current official recommended resolution", () => {
+  assert.equal(actualRules.recommendedWidth, 3840);
+  assert.equal(actualRules.recommendedHeight, 2160);
+});
+
+test("warns when a 1280 by 720 thumbnail is below the current recommendation", () => {
+  const result = validateThumbnail(
+    { width: 1280, height: 720, size: 300_000, type: "image/jpeg" },
+    RULES,
+  );
+  assert.equal(result.status, "warning");
+  assert.equal(result.checks.find((check) => check.id === "dimensions").status, "warning");
 });
 
 test("calculates a centered 16 by 9 cover crop", () => {

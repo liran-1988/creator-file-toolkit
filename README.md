@@ -1,6 +1,6 @@
 # Creator File Toolkit
 
-The first tool is a private, browser-only YouTube Thumbnail Checker. It validates image dimensions, aspect ratio, format, and file size, previews approximate interface overlap, and exports a corrected 1280 x 720 JPEG.
+The first tool is a private, browser-only YouTube Thumbnail Checker. It validates image dimensions, aspect ratio, format, and file size, previews approximate interface overlap, and exports a corrected 3840 x 2160 JPEG.
 
 ## Privacy
 
