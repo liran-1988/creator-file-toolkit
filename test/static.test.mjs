@@ -80,6 +80,21 @@ test("English and Chinese pages declare reciprocal language metadata", async () 
   assert.match(chinese, /YouTube 缩略图检测/);
 });
 
+test("English and Chinese pages use the verified AdSense account with accurate privacy copy", async () => {
+  const [english, chinese] = await Promise.all([
+    readProjectFile("index.html"),
+    readProjectFile("zh/index.html"),
+  ]);
+  for (const html of [english, chinese]) {
+    assert.match(html, /pagead2\.googlesyndication\.com\/pagead\/js\/adsbygoogle\.js\?client=ca-pub-1349340832655411/);
+    assert.match(html, /crossorigin="anonymous"/);
+  }
+  assert.doesNotMatch(english, /No tracking script/);
+  assert.doesNotMatch(chinese, /没有跟踪脚本/);
+  assert.match(english, /Advertising may be provided by Google/);
+  assert.match(chinese, /广告可能由 Google 提供/);
+});
+
 test("sitemap exposes both localized URLs and Search Console verification", async () => {
   const [sitemap, verification] = await Promise.all([
     readProjectFile("sitemap.xml"),

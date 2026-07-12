@@ -22,6 +22,10 @@ function resolveBrowserPath() {
   return browserPath;
 }
 
+async function blockAdNetwork(page) {
+  await page.route("https://pagead2.googlesyndication.com/**", (route) => route.abort());
+}
+
 async function startStaticServer() {
   const root = path.resolve(__dirname, "..");
   const contentTypes = {
@@ -128,6 +132,7 @@ async function createMetadataHeavyJpeg(page) {
     executablePath: resolveBrowserPath(),
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await blockAdNetwork(page);
 
   try {
     const localizedFlows = [
@@ -215,6 +220,7 @@ async function createMetadataHeavyJpeg(page) {
 
     for (const flow of localizedFlows) {
       const mobilePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await blockAdNetwork(mobilePage);
       await mobilePage.goto(`${baseUrl}${flow.path}`, { waitUntil: "networkidle" });
       await mobilePage.getByRole("button", { name: flow.sample }).click();
       await mobilePage.locator("#result-status").filter({ hasText: flow.pass }).waitFor({ timeout: 15000 });
@@ -317,6 +323,7 @@ async function createMetadataHeavyJpeg(page) {
       };
     });
     const racePage = await raceContext.newPage();
+    await blockAdNetwork(racePage);
     await racePage.goto(baseUrl, { waitUntil: "networkidle" });
     const slowLoad = racePage.locator("#file-input").setInputFiles({
       name: "slow.png",
