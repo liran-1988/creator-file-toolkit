@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YouTube Thumbnail Checker - Size, Ratio &amp; Safe Area Preview</title>
+    <meta name="description" content="Check YouTube thumbnail dimensions, aspect ratio, format, and file size. Preview common layouts and fix images locally in your browser.">
+    <meta name="theme-color" content="#ffffff">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="YouTube Thumbnail Checker">
+    <meta property="og:description" content="Validate and fix a YouTube thumbnail without uploading your image.">
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#thumbnail-checker">Skip to checker</a>
+
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="./" aria-label="Creator File Toolkit home">
+          <span class="brand-mark" aria-hidden="true">CT</span>
+          <span>Creator File Toolkit</span>
+        </a>
+        <p class="privacy-badge"><span aria-hidden="true"></span> Files stay on your device</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="tool-band" id="thumbnail-checker" aria-labelledby="page-title">
+        <div class="shell">
+          <div class="title-row">
+            <div>
+              <p class="eyebrow">YouTube creator tool</p>
+              <h1 id="page-title">Thumbnail checker</h1>
+              <p class="lede">Check upload requirements, preview common placements, and export a corrected 1280 x 720 image.</p>
+            </div>
+            <button class="button button-secondary" id="sample-button" type="button">Try sample</button>
+          </div>
+
+          <div class="upload-zone" id="drop-zone" tabindex="0" role="button" aria-controls="file-input" aria-describedby="upload-help">
+            <input id="file-input" type="file" accept="image/jpeg,image/png" hidden>
+            <div class="upload-icon" aria-hidden="true">+</div>
+            <div>
+              <strong>Drop a JPEG or PNG here</strong>
+              <p id="upload-help">or choose a file from your device</p>
+            </div>
+            <span class="button button-primary" aria-hidden="true">Choose image</span>
+          </div>
+
+          <p class="status-message" id="status-message" aria-live="polite">No image selected.</p>
+
+          <div class="workspace" id="workspace" data-state="empty">
+            <div class="preview-column">
+              <div class="preview-toolbar">
+                <h2>Preview</h2>
+                <div class="segmented-control" role="group" aria-label="Preview placement">
+                  <button type="button" class="segment is-active" data-preview-mode="desktop" aria-pressed="true">Desktop</button>
+                  <button type="button" class="segment" data-preview-mode="mobile" aria-pressed="false">Mobile</button>
+                  <button type="button" class="segment" data-preview-mode="compact" aria-pressed="false">Compact</button>
+                </div>
+              </div>
+
+              <div class="preview-frame" id="preview-frame" data-mode="desktop">
+                <div class="preview-empty" id="preview-empty">
+                  <strong>Your thumbnail appears here</strong>
+                  <span>Use the sample or select an image.</span>
+                </div>
+                <img id="preview-image" alt="Selected thumbnail preview" hidden>
+                <div class="safe-overlay" id="safe-overlay" aria-hidden="true">
+                  <span class="duration-chip">12:34</span>
+                  <span class="menu-dots">...</span>
+                  <span class="safe-label">Approximate UI area</span>
+                </div>
+              </div>
+              <p class="preview-note">Placement overlays are approximate previews, not official upload constraints.</p>
+            </div>
+
+            <aside class="results-column" aria-labelledby="results-heading">
+              <div class="result-heading-row">
+                <div>
+                  <p class="eyebrow">Upload readiness</p>
+                  <h2 id="results-heading">Checks</h2>
+                </div>
+                <span class="result-status is-empty" id="result-status">Waiting</span>
+              </div>
+
+              <ul class="results-list" id="results-list">
+                <li class="empty-result">Select an image to check dimensions, ratio, size, and format.</li>
+              </ul>
+
+              <div class="correction-panel" aria-labelledby="correction-heading">
+                <h3 id="correction-heading">Correct the file</h3>
+                <p>Center-crop to 16:9, resize to 1280 x 720, and export an upload-ready JPEG.</p>
+                <dl class="file-comparison" id="file-comparison" hidden>
+                  <div><dt>Original</dt><dd id="original-value">-</dd></div>
+                  <div><dt>Corrected</dt><dd id="corrected-value">-</dd></div>
+                </dl>
+                <div class="action-row">
+                  <button class="button button-primary" id="fix-button" type="button" disabled>Fix &amp; preview</button>
+                  <button class="button button-success" id="download-button" type="button" disabled>Download JPEG</button>
+                  <button class="button button-quiet" id="reset-button" type="button" disabled>Reset</button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="guide-band" id="requirements-guide" aria-labelledby="guide-title">
+        <div class="shell guide-layout">
+          <div class="guide-main">
+            <p class="eyebrow">Current upload guidance</p>
+            <h2 id="guide-title">What makes a YouTube thumbnail ready?</h2>
+            <p>A strong upload starts with the technical basics. This checker evaluates those basics before you open YouTube Studio.</p>
+
+            <div class="requirements-grid">
+              <article>
+                <span class="requirement-number">01</span>
+                <h3>Use a 16:9 canvas</h3>
+                <p>1280 x 720 pixels is the recommended working size. Wider or taller artwork may be cropped in previews.</p>
+              </article>
+              <article>
+                <span class="requirement-number">02</span>
+                <h3>Keep enough resolution</h3>
+                <p>The image should be at least 640 pixels wide. Small files can look soft on televisions and high-density screens.</p>
+              </article>
+              <article>
+                <span class="requirement-number">03</span>
+                <h3>Stay below the limit</h3>
+                <p>The checker targets a file size of 2 MB or less and can export a compressed JPEG when the original is too large.</p>
+              </article>
+              <article>
+                <span class="requirement-number">04</span>
+                <h3>Check interface overlap</h3>
+                <p>Keep critical text and faces away from the lower-right duration label and other likely interface areas.</p>
+              </article>
+            </div>
+          </div>
+
+          <aside class="privacy-panel">
+            <h2>Private by design</h2>
+            <p>Your image is processed locally in your browser. It is not uploaded to this site or sent to an image API.</p>
+            <ul>
+              <li>No account</li>
+              <li>No cloud storage</li>
+              <li>No tracking script</li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section class="faq-band" aria-labelledby="faq-title">
+        <div class="shell faq-layout">
+          <div>
+            <p class="eyebrow">Quick answers</p>
+            <h2 id="faq-title">Thumbnail checker FAQ</h2>
+          </div>
+          <div class="faq-list">
+            <details>
+              <summary>Does this score thumbnail quality or CTR?</summary>
+              <p>No. It checks technical readiness and placement previews. It does not claim to predict clicks or judge creative quality.</p>
+            </details>
+            <details>
+              <summary>Are the safe-area overlays official?</summary>
+              <p>No. They are approximate guides for common interface elements. YouTube can change crops and controls by device and placement.</p>
+            </details>
+            <details>
+              <summary>Where do the upload requirements come from?</summary>
+              <p>Rules are reviewed against the <a href="https://support.google.com/youtube/answer/72431?hl=en" rel="noopener">official YouTube Help guidance</a>. Last reviewed July 12, 2026.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <p>Creator File Toolkit</p>
+        <p>Built for fast, local file checks.</p>
+      </div>
+    </footer>
+  </body>
+</html>
