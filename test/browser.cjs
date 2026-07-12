@@ -140,7 +140,12 @@ async function createMetadataHeavyJpeg(page) {
         download: "Download JPEG",
         reset: "Reset",
         waiting: "Waiting",
+        tooLarge: "24 megapixels",
+        invalidPng: "Invalid PNG header",
         alternateHref: "zh/",
+        alternatePath: "/zh/",
+        alternateLang: "zh-CN",
+        alternateCanonical: "https://liran-1988.github.io/creator-file-toolkit/zh/",
       },
       {
         slug: "zh-CN",
@@ -151,7 +156,12 @@ async function createMetadataHeavyJpeg(page) {
         download: "下载 JPEG",
         reset: "重置",
         waiting: "等待中",
+        tooLarge: "2400 万像素",
+        invalidPng: "PNG 文件头无效",
         alternateHref: "../",
+        alternatePath: "/",
+        alternateLang: "en",
+        alternateCanonical: "https://liran-1988.github.io/creator-file-toolkit/",
       },
     ];
 
@@ -173,7 +183,34 @@ async function createMetadataHeavyJpeg(page) {
       await downloadPromise;
       await page.getByRole("button", { name: flow.reset }).click();
       assert.equal(await page.locator("#result-status").textContent(), flow.waiting);
-      assert.equal(await page.locator(".language-switch a:not([aria-current])").getAttribute("href"), flow.alternateHref);
+
+      const oversizedPng = Buffer.alloc(24);
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(oversizedPng, 0);
+      oversizedPng.writeUInt32BE(13, 8);
+      Buffer.from("IHDR", "ascii").copy(oversizedPng, 12);
+      oversizedPng.writeUInt32BE(8000, 16);
+      oversizedPng.writeUInt32BE(4000, 20);
+      await page.locator("#file-input").setInputFiles({
+        name: "oversized.png",
+        mimeType: "image/png",
+        buffer: oversizedPng,
+      });
+      await page.locator("#status-message").filter({ hasText: flow.tooLarge }).waitFor();
+
+      await page.locator("#file-input").setInputFiles({
+        name: "corrupt.png",
+        mimeType: "image/png",
+        buffer: Buffer.from("not a png"),
+      });
+      await page.locator("#status-message").filter({ hasText: flow.invalidPng }).waitFor();
+
+      const alternateLink = page.locator(".language-switch a:not([aria-current])");
+      assert.equal(await alternateLink.getAttribute("href"), flow.alternateHref);
+      await alternateLink.click();
+      await page.waitForLoadState("networkidle");
+      assert.equal(new URL(page.url()).pathname, flow.alternatePath);
+      assert.equal(await page.locator("html").getAttribute("lang"), flow.alternateLang);
+      assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), flow.alternateCanonical);
     }
 
     for (const flow of localizedFlows) {
