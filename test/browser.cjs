@@ -130,9 +130,49 @@ async function createMetadataHeavyJpeg(page) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 
   try {
+    const localizedFlows = [
+      {
+        path: "/",
+        sample: "Try sample",
+        pass: "Pass",
+        fix: "Fix & preview",
+        download: "Download JPEG",
+        reset: "Reset",
+        waiting: "Waiting",
+        alternateHref: "zh/",
+      },
+      {
+        path: "/zh/",
+        sample: "试用示例",
+        pass: "通过",
+        fix: "修正并预览",
+        download: "下载 JPEG",
+        reset: "重置",
+        waiting: "等待中",
+        alternateHref: "../",
+      },
+    ];
+
+    for (const flow of localizedFlows) {
+      await page.goto(`${baseUrl}${flow.path}`, { waitUntil: "networkidle" });
+      await page.getByRole("button", { name: flow.sample }).click();
+      await page.locator("#preview-image").waitFor({ state: "visible", timeout: 15000 });
+      assert.equal(await page.locator("#result-status").textContent(), flow.pass);
+      assert.equal(await page.locator("#results-list .check-row").count(), 4);
+      await page.getByRole("button", { name: flow.fix }).click();
+      await page.locator("#download-button:not([disabled])").waitFor({ timeout: 3000 });
+      assert.match(await page.locator("#corrected-value").textContent(), /3840 x 2160/);
+      const downloadPromise = page.waitForEvent("download");
+      await page.getByRole("button", { name: flow.download }).click();
+      await downloadPromise;
+      await page.getByRole("button", { name: flow.reset }).click();
+      assert.equal(await page.locator("#result-status").textContent(), flow.waiting);
+      assert.equal(await page.locator(".language-switch a:not([aria-current])").getAttribute("href"), flow.alternateHref);
+    }
+
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Try sample" }).click();
-    await page.locator("#preview-image").waitFor({ state: "visible", timeout: 3000 });
+    await page.locator("#preview-image").waitFor({ state: "visible", timeout: 15000 });
     assert.equal(await page.locator("#result-status").textContent(), "Pass");
     assert.equal(await page.locator("#results-list .check-row").count(), 4);
     assert.equal(await page.locator("#results-list .check-status").count(), 4);

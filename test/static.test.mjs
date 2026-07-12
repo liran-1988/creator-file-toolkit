@@ -56,6 +56,45 @@ test("page declares the exact public canonical URL", async () => {
   assert.match(html, /rel="canonical" href="https:\/\/liran-1988\.github\.io\/creator-file-toolkit\/"/);
 });
 
+test("English and Chinese pages declare reciprocal language metadata", async () => {
+  const [english, chinese] = await Promise.all([
+    readProjectFile("index.html"),
+    readProjectFile("zh/index.html"),
+  ]);
+  const rootUrl = "https://liran-1988.github.io/creator-file-toolkit/";
+  const chineseUrl = `${rootUrl}zh/`;
+
+  assert.match(english, /<html lang="en">/);
+  assert.match(chinese, /<html lang="zh-CN">/);
+  assert.ok(english.includes(`rel="canonical" href="${rootUrl}"`));
+  assert.ok(chinese.includes(`rel="canonical" href="${chineseUrl}"`));
+
+  for (const html of [english, chinese]) {
+    assert.ok(html.includes(`rel="alternate" hreflang="en" href="${rootUrl}"`));
+    assert.ok(html.includes(`rel="alternate" hreflang="zh-CN" href="${chineseUrl}"`));
+    assert.ok(html.includes(`rel="alternate" hreflang="x-default" href="${rootUrl}"`));
+  }
+
+  assert.match(english, /href="zh\/"[^>]*>中文</);
+  assert.match(chinese, /href="\.\.\/"[^>]*>EN</);
+  assert.match(chinese, /YouTube 缩略图检测/);
+});
+
+test("sitemap exposes both localized URLs and Search Console verification", async () => {
+  const [sitemap, verification] = await Promise.all([
+    readProjectFile("sitemap.xml"),
+    readProjectFile("google6c947f734196aa98.html"),
+  ]);
+
+  assert.match(sitemap, /xmlns:xhtml="http:\/\/www\.w3\.org\/1999\/xhtml"/);
+  assert.match(sitemap, /<loc>https:\/\/liran-1988\.github\.io\/creator-file-toolkit\/<\/loc>/);
+  assert.match(sitemap, /<loc>https:\/\/liran-1988\.github\.io\/creator-file-toolkit\/zh\/<\/loc>/);
+  assert.match(sitemap, /xhtml:link rel="alternate" hreflang="en"/);
+  assert.match(sitemap, /xhtml:link rel="alternate" hreflang="zh-CN"/);
+  assert.match(sitemap, /xhtml:link rel="alternate" hreflang="x-default"/);
+  assert.equal(verification.trim(), "google-site-verification: google6c947f734196aa98.html");
+});
+
 test("repository includes public documentation and discovery files", async () => {
   const [readme, license, robots, sitemap, notFound] = await Promise.all([
     readProjectFile("README.md"),

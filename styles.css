@@ -129,6 +129,43 @@ summary:focus-visible {
   background: var(--pass);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.language-switch {
+  height: 36px;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(42px, auto));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--white);
+}
+
+.language-switch a {
+  min-width: 42px;
+  display: grid;
+  place-items: center;
+  border-left: 1px solid var(--line);
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.language-switch a:first-child {
+  border-left: 0;
+}
+
+.language-switch a[aria-current="page"] {
+  color: var(--white);
+  background: var(--ink);
+}
+
 .tool-band {
   padding: 48px 0 64px;
   background: var(--white);
@@ -784,6 +821,14 @@ h3 {
 
   .privacy-badge {
     display: none;
+  }
+
+  .header-actions {
+    gap: 0;
+  }
+
+  .language-switch a {
+    padding: 0 8px;
   }
 
   .tool-band {

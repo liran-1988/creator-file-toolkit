@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YouTube 缩略图检测 - 尺寸、比例与安全区域预览</title>
+    <meta name="description" content="检测 YouTube 缩略图的尺寸、宽高比、格式和文件大小，在浏览器本地预览常见版位并修正图片。">
+    <meta name="theme-color" content="#ffffff">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="YouTube 缩略图检测">
+    <meta property="og:description" content="无需上传图片，在浏览器本地检测并修正 YouTube 缩略图。">
+    <meta property="og:url" content="https://liran-1988.github.io/creator-file-toolkit/zh/">
+    <link rel="canonical" href="https://liran-1988.github.io/creator-file-toolkit/zh/">
+    <link rel="alternate" hreflang="en" href="https://liran-1988.github.io/creator-file-toolkit/">
+    <link rel="alternate" hreflang="zh-CN" href="https://liran-1988.github.io/creator-file-toolkit/zh/">
+    <link rel="alternate" hreflang="x-default" href="https://liran-1988.github.io/creator-file-toolkit/">
+    <link rel="stylesheet" href="../styles.css">
+    <script type="module" src="../app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#thumbnail-checker">跳到检测工具</a>
+
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="../" aria-label="Creator File Toolkit 首页">
+          <span class="brand-mark" aria-hidden="true">CT</span>
+          <span>Creator File Toolkit</span>
+        </a>
+        <div class="header-actions">
+          <p class="privacy-badge"><span aria-hidden="true"></span> 文件仅在设备本地处理</p>
+          <nav class="language-switch" aria-label="语言">
+            <a href="../">EN</a>
+            <a href="./" aria-current="page">中文</a>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="tool-band" id="thumbnail-checker" aria-labelledby="page-title">
+        <div class="shell">
+          <div class="title-row">
+            <div>
+              <p class="eyebrow">YouTube 创作者工具</p>
+              <h1 id="page-title">YouTube 缩略图检测</h1>
+              <p class="lede">检查上传要求、预览常见展示位置，并导出修正后的 3840 x 2160 图片。</p>
+            </div>
+            <button class="button button-secondary" id="sample-button" type="button">试用示例</button>
+          </div>
+
+          <div class="upload-zone" id="drop-zone" tabindex="0" role="button" aria-controls="file-input" aria-describedby="upload-help">
+            <input id="file-input" type="file" accept="image/jpeg,image/png" hidden>
+            <div class="upload-icon" aria-hidden="true">+</div>
+            <div>
+              <strong>将 JPEG 或 PNG 拖到这里</strong>
+              <p id="upload-help">或从设备中选择文件</p>
+            </div>
+            <span class="button button-primary" aria-hidden="true">选择图片</span>
+          </div>
+
+          <p class="status-message" id="status-message" aria-live="polite">尚未选择图片。</p>
+
+          <div class="workspace" id="workspace" data-state="empty">
+            <div class="preview-column">
+              <div class="preview-toolbar">
+                <h2>预览</h2>
+                <div class="segmented-control" role="group" aria-label="预览位置">
+                  <button type="button" class="segment is-active" data-preview-mode="desktop" aria-pressed="true">桌面端</button>
+                  <button type="button" class="segment" data-preview-mode="mobile" aria-pressed="false">移动端</button>
+                  <button type="button" class="segment" data-preview-mode="compact" aria-pressed="false">紧凑</button>
+                </div>
+              </div>
+
+              <div class="placement-stage" id="placement-stage" data-mode="desktop">
+                <div class="preview-frame" id="preview-frame" data-mode="desktop">
+                  <div class="preview-empty" id="preview-empty">
+                    <strong>缩略图将在这里显示</strong>
+                    <span>试用示例或选择一张图片。</span>
+                  </div>
+                  <img id="preview-image" alt="所选缩略图预览" hidden>
+                  <div class="safe-overlay" id="safe-overlay" aria-hidden="true">
+                    <span class="duration-chip">12:34</span>
+                    <span class="menu-dots">...</span>
+                    <span class="safe-label">大致界面区域</span>
+                  </div>
+                </div>
+                <div class="placement-context" aria-hidden="true">
+                  <span class="channel-avatar"></span>
+                  <span class="placement-copy">
+                    <strong>视频标题预览</strong>
+                    <span>频道名称 · 展示位置预览</span>
+                  </span>
+                  <span class="context-menu">...</span>
+                </div>
+              </div>
+              <p class="preview-note">展示位置遮罩仅为近似预览，不代表官方上传限制。</p>
+            </div>
+
+            <aside class="results-column" aria-labelledby="results-heading">
+              <div class="result-heading-row">
+                <div>
+                  <p class="eyebrow">上传准备情况</p>
+                  <h2 id="results-heading">检查结果</h2>
+                </div>
+                <span class="result-status is-empty" id="result-status">等待中</span>
+              </div>
+
+              <ul class="results-list" id="results-list">
+                <li class="empty-result">选择图片后即可检查尺寸、宽高比、大小和格式。</li>
+              </ul>
+
+              <div class="correction-panel" aria-labelledby="correction-heading">
+                <h3 id="correction-heading">修正文件</h3>
+                <p>居中裁剪为 16:9，调整至 3840 x 2160，并导出可上传的 JPEG。</p>
+                <dl class="file-comparison" id="file-comparison" hidden>
+                  <div><dt>原图</dt><dd id="original-value">-</dd></div>
+                  <div><dt>修正后</dt><dd id="corrected-value">-</dd></div>
+                </dl>
+                <div class="action-row">
+                  <button class="button button-primary" id="fix-button" type="button" disabled>修正并预览</button>
+                  <button class="button button-success" id="download-button" type="button" disabled>下载 JPEG</button>
+                  <button class="button button-quiet" id="reset-button" type="button" disabled>重置</button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="guide-band" id="requirements-guide" aria-labelledby="guide-title">
+        <div class="shell guide-layout">
+          <div class="guide-main">
+            <p class="eyebrow">当前上传指南</p>
+            <h2 id="guide-title">怎样的 YouTube 缩略图可以直接上传？</h2>
+            <p>可靠的上传从技术基础开始。本工具会在你打开 YouTube Studio 前检查这些基础要求。</p>
+
+            <div class="requirements-grid">
+              <article>
+                <span class="requirement-number">01</span>
+                <h3>使用 16:9 画布</h3>
+                <p>当前建议尺寸为 3840 x 2160 像素。更宽或更高的图片可能在预览中被裁剪。</p>
+              </article>
+              <article>
+                <span class="requirement-number">02</span>
+                <h3>保留足够分辨率</h3>
+                <p>图片宽度至少应为 640 像素。较小图片在电视和高像素密度屏幕上可能显得模糊。</p>
+              </article>
+              <article>
+                <span class="requirement-number">03</span>
+                <h3>控制文件大小</h3>
+                <p>本工具以不超过 2 MB 为目标，原图过大时可导出经过压缩的 JPEG。</p>
+              </article>
+              <article>
+                <span class="requirement-number">04</span>
+                <h3>检查界面遮挡</h3>
+                <p>重要文字和人脸应避开右下角时长标签及其他可能出现的界面区域。</p>
+              </article>
+            </div>
+          </div>
+
+          <aside class="privacy-panel">
+            <h2>隐私优先设计</h2>
+            <p>图片仅在你的浏览器本地处理，不会上传到本站或发送给图片 API。</p>
+            <ul>
+              <li>无需账号</li>
+              <li>不使用云存储</li>
+              <li>没有跟踪脚本</li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section class="faq-band" aria-labelledby="faq-title">
+        <div class="shell faq-layout">
+          <div>
+            <p class="eyebrow">常见问题</p>
+            <h2 id="faq-title">缩略图检测 FAQ</h2>
+          </div>
+          <div class="faq-list">
+            <details>
+              <summary>这个工具会给缩略图质量或点击率打分吗？</summary>
+              <p>不会。它只检查技术要求并提供展示位置预览，不预测点击率，也不评价创意质量。</p>
+            </details>
+            <details>
+              <summary>安全区域遮罩是官方标准吗？</summary>
+              <p>不是。它们只是常见界面元素的大致参考。YouTube 可能根据设备和展示位置调整裁剪与控件。</p>
+            </details>
+            <details>
+              <summary>上传要求来自哪里？</summary>
+              <p>规则会参考<a href="https://support.google.com/youtube/answer/72431?hl=zh-Hans" rel="noopener">官方 YouTube 帮助文档</a>进行核对。最后核对日期：2026 年 7 月 12 日。</p>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <p>Creator File Toolkit</p>
+        <p>快速、私密的本地文件检测工具。</p>
+      </div>
+    </footer>
+  </body>
+</html>
