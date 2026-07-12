@@ -246,6 +246,19 @@ async function createMetadataHeavyJpeg(page) {
       await page.goto(`${baseUrl}${privacyPage.path}`, { waitUntil: "networkidle" });
       await page.getByRole("heading", { name: privacyPage.heading }).waitFor();
       assert.equal(await page.locator("html").getAttribute("lang"), privacyPage.lang);
+      const footerContrast = await page.locator(".site-footer a").evaluate((link) => {
+        const toLuminance = (color) => {
+          const values = color.match(/\d+(?:\.\d+)?/g).slice(0, 3).map(Number).map((value) => {
+            const channel = value / 255;
+            return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+          });
+          return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722;
+        };
+        const foreground = toLuminance(getComputedStyle(link).color);
+        const background = toLuminance(getComputedStyle(link.closest(".site-footer")).backgroundColor);
+        return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
+      });
+      assert.ok(footerContrast >= 4.5, `footer link contrast ${footerContrast.toFixed(2)} is below 4.5`);
     }
 
     await page.goto(baseUrl, { waitUntil: "networkidle" });
