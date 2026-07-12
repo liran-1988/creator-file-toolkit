@@ -127,11 +127,12 @@ async function createMetadataHeavyJpeg(page) {
     headless: true,
     executablePath: resolveBrowserPath(),
   });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 
   try {
     const localizedFlows = [
       {
+        slug: "en",
         path: "/",
         sample: "Try sample",
         pass: "Pass",
@@ -142,6 +143,7 @@ async function createMetadataHeavyJpeg(page) {
         alternateHref: "zh/",
       },
       {
+        slug: "zh-CN",
         path: "/zh/",
         sample: "试用示例",
         pass: "通过",
@@ -159,6 +161,10 @@ async function createMetadataHeavyJpeg(page) {
       await page.locator("#preview-image").waitFor({ state: "visible", timeout: 15000 });
       assert.equal(await page.locator("#result-status").textContent(), flow.pass);
       assert.equal(await page.locator("#results-list .check-row").count(), 4);
+      if (process.env.CAPTURE_VISUALS) {
+        fs.mkdirSync(path.resolve(__dirname, "../artifacts"), { recursive: true });
+        await page.screenshot({ path: path.resolve(__dirname, `../artifacts/${flow.slug}-desktop.png`), fullPage: true });
+      }
       await page.getByRole("button", { name: flow.fix }).click();
       await page.locator("#download-button:not([disabled])").waitFor({ timeout: 3000 });
       assert.match(await page.locator("#corrected-value").textContent(), /3840 x 2160/);
@@ -168,6 +174,26 @@ async function createMetadataHeavyJpeg(page) {
       await page.getByRole("button", { name: flow.reset }).click();
       assert.equal(await page.locator("#result-status").textContent(), flow.waiting);
       assert.equal(await page.locator(".language-switch a:not([aria-current])").getAttribute("href"), flow.alternateHref);
+    }
+
+    for (const flow of localizedFlows) {
+      const mobilePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await mobilePage.goto(`${baseUrl}${flow.path}`, { waitUntil: "networkidle" });
+      await mobilePage.getByRole("button", { name: flow.sample }).click();
+      await mobilePage.locator("#result-status").filter({ hasText: flow.pass }).waitFor({ timeout: 15000 });
+      const mobileMetrics = await mobilePage.evaluate(() => ({
+        viewportWidth: innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+        clippedButtons: [...document.querySelectorAll("button")]
+          .filter((button) => button.scrollWidth > button.clientWidth + 1)
+          .map((button) => button.textContent.trim()),
+      }));
+      assert.equal(mobileMetrics.scrollWidth, mobileMetrics.viewportWidth);
+      assert.deepEqual(mobileMetrics.clippedButtons, []);
+      if (process.env.CAPTURE_VISUALS) {
+        await mobilePage.screenshot({ path: path.resolve(__dirname, `../artifacts/${flow.slug}-mobile.png`), fullPage: true });
+      }
+      await mobilePage.close();
     }
 
     await page.goto(baseUrl, { waitUntil: "networkidle" });
@@ -242,21 +268,6 @@ async function createMetadataHeavyJpeg(page) {
     await page.getByRole("button", { name: "Try sample" }).click();
     await page.locator("#result-status").filter({ hasText: "Pass" }).waitFor();
     await page.context().setOffline(false);
-
-    const mobilePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    await mobilePage.goto(baseUrl, { waitUntil: "networkidle" });
-    await mobilePage.getByRole("button", { name: "Try sample" }).click();
-    await mobilePage.locator("#result-status").filter({ hasText: "Pass" }).waitFor();
-    const mobileMetrics = await mobilePage.evaluate(() => ({
-      viewportWidth: innerWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-      clippedButtons: [...document.querySelectorAll("button")]
-        .filter((button) => button.scrollWidth > button.clientWidth + 1)
-        .map((button) => button.textContent.trim()),
-    }));
-    assert.equal(mobileMetrics.scrollWidth, mobileMetrics.viewportWidth);
-    assert.deepEqual(mobileMetrics.clippedButtons, []);
-    await mobilePage.close();
 
     const raceContext = await browser.newContext();
     await raceContext.addInitScript(() => {
