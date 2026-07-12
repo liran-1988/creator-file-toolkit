@@ -6,12 +6,14 @@ import {
   validateThumbnail,
 } from "./core.mjs";
 import { YOUTUBE_THUMBNAIL_RULES } from "./rules.mjs";
+import { getMessages, TRANSLATIONS } from "./i18n.mjs";
 
 const MAX_PIXELS = 24_000_000;
 const JPEG_HEADER_INITIAL_READ = 64 * 1024;
 const JPEG_HEADER_SCAN_LIMIT = 16 * 1024 * 1024;
 const TARGET_WIDTH = YOUTUBE_THUMBNAIL_RULES.recommendedWidth;
 const TARGET_HEIGHT = YOUTUBE_THUMBNAIL_RULES.recommendedHeight;
+const messages = getMessages(document.documentElement.lang);
 
 const elements = {
   fileInput: document.querySelector("#file-input"),
@@ -60,12 +62,7 @@ function setWorkspaceState(value) {
 
 function setResultStatus(status) {
   elements.resultStatus.className = `result-status is-${status}`;
-  elements.resultStatus.textContent = {
-    pass: "Pass",
-    warning: "Review",
-    fail: "Fix needed",
-    empty: "Waiting",
-  }[status];
+  elements.resultStatus.textContent = messages.status[status];
 }
 
 function setPreviewMode(mode) {
@@ -94,17 +91,24 @@ function renderChecks(result) {
     const labelLine = document.createElement("span");
     labelLine.className = "label-line";
     const label = document.createElement("strong");
-    label.textContent = check.label;
+    const localized = messages.checks[check.id];
+    label.textContent = localized.label;
     const statusText = document.createElement("span");
     statusText.className = "check-status";
-    statusText.textContent = check.status === "warning"
-      ? "Warning"
-      : check.status[0].toUpperCase() + check.status.slice(1);
+    statusText.textContent = messages.checkStatus[check.status];
     labelLine.append(label, statusText);
     const actual = document.createElement("span");
-    actual.textContent = check.actual;
+    actual.textContent = check.id === "dimensions" && check.actual === "Invalid dimensions"
+      ? localized.invalid
+      : (check.id === "ratio" || check.id === "format") && check.actual === "Unknown"
+        ? localized.unknown
+        : check.actual;
     const expected = document.createElement("small");
-    expected.textContent = check.expected;
+    expected.textContent = check.id === "dimensions"
+      ? localized.expected(TARGET_WIDTH, TARGET_HEIGHT, YOUTUBE_THUMBNAIL_RULES.minimumWidth)
+      : check.id === "file-size"
+        ? localized.expected(formatBytes(YOUTUBE_THUMBNAIL_RULES.maximumBytes))
+        : localized.expected;
     copy.append(labelLine, actual, expected);
     item.append(indicator, copy);
     elements.resultsList.append(item);
@@ -144,7 +148,7 @@ function clearLoadedState() {
   elements.previewImage.hidden = true;
   elements.previewEmpty.hidden = false;
   elements.previewFrame.classList.remove("has-image");
-  elements.resultsList.innerHTML = '<li class="empty-result">Select an image to check dimensions, ratio, size, and format.</li>';
+  elements.resultsList.innerHTML = `<li class="empty-result">${messages.empty.results}</li>`;
   setResultStatus("empty");
   elements.fileComparison.hidden = true;
   elements.originalValue.textContent = "-";
@@ -157,7 +161,7 @@ function loadImageElement(url) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("The browser could not decode this image."));
+    image.onerror = () => reject(new Error(messages.errors.decode));
     image.src = url;
   });
 }
@@ -195,14 +199,14 @@ async function readDimensionsBeforeDecode(file) {
       if (byteCount >= scanLimit) {
         throw new Error(
           file.size > JPEG_HEADER_SCAN_LIMIT
-            ? "Could not find JPEG dimensions within the 16 MB metadata scan limit."
-            : "Could not read JPEG dimensions from the complete file header.",
+            ? messages.errors.jpegScanLimit
+            : messages.errors.jpegCompleteHeader,
         );
       }
       byteCount = Math.min(byteCount * 2, scanLimit);
     }
   }
-  throw new Error("The JPEG file is empty.");
+  throw new Error(messages.errors.jpegEmpty);
 }
 
 function showPreview(url) {
@@ -214,7 +218,9 @@ function showPreview(url) {
 
 function showError(error) {
   setWorkspaceState("error");
-  setStatus(error instanceof Error ? error.message : String(error), "error");
+  const value = error instanceof Error ? error.message : String(error);
+  const englishKey = Object.entries(TRANSLATIONS.en.errors).find(([, message]) => message === value)?.[0];
+  setStatus(englishKey ? messages.errors[englishKey] : value, "error");
   elements.resetButton.disabled = false;
 }
 
@@ -222,18 +228,18 @@ async function inspectFile(file) {
   const requestId = ++state.requestId;
   clearLoadedState();
   setWorkspaceState("loading");
-  setStatus("Reading image details locally...", "neutral");
+  setStatus(messages.activity.reading, "neutral");
   elements.resetButton.disabled = false;
 
   try {
     if (!YOUTUBE_THUMBNAIL_RULES.supportedTypes.includes(file.type)) {
-      throw new Error("Choose a JPEG or PNG file. Other formats are not supported by this checker yet.");
+      throw new Error(messages.errors.unsupportedFormat);
     }
 
     const headerDimensions = await readDimensionsBeforeDecode(file);
     if (requestId !== state.requestId) return;
     if (headerDimensions.width * headerDimensions.height > MAX_PIXELS) {
-      throw new Error("This image is too large to decode safely. Choose an image at or below 24 megapixels.");
+      throw new Error(messages.errors.tooLarge);
     }
 
     const source = await decodeFile(file);
@@ -247,7 +253,7 @@ async function inspectFile(file) {
       file.type === "image/jpeg",
     )) {
       if (typeof source.close === "function") source.close();
-      throw new Error("The decoded image dimensions do not match its file header.");
+      throw new Error(messages.errors.dimensionsMismatch);
     }
 
     state.file = file;
@@ -259,13 +265,13 @@ async function inspectFile(file) {
     showPreview(state.originalUrl);
     renderChecks(result);
     elements.originalValue.textContent = `${metadata.width} x ${metadata.height} / ${formatBytes(file.size)}`;
-    elements.correctedValue.textContent = "Not created";
+    elements.correctedValue.textContent = messages.comparison.notCreated;
     elements.fileComparison.hidden = false;
     elements.fixButton.disabled = false;
     elements.downloadButton.disabled = true;
     elements.fileInput.value = "";
     setWorkspaceState("ready");
-    setStatus(result.summary, result.status);
+    setStatus(messages.summary[result.status], result.status);
   } catch (error) {
     if (requestId === state.requestId) showError(error);
   }
@@ -274,7 +280,7 @@ async function inspectFile(file) {
 function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => blob ? resolve(blob) : reject(new Error("The browser could not create the corrected image.")),
+      (blob) => blob ? resolve(blob) : reject(new Error(messages.errors.createCorrected)),
       type,
       quality,
     );
@@ -297,7 +303,7 @@ async function correctImage() {
   setWorkspaceState("processing");
   elements.fixButton.disabled = true;
   elements.downloadButton.disabled = true;
-  setStatus("Cropping and compressing locally...", "neutral");
+  setStatus(messages.activity.processing, "neutral");
 
   try {
     const crop = calculateCoverCrop(
@@ -310,7 +316,7 @@ async function correctImage() {
     canvas.width = TARGET_WIDTH;
     canvas.height = TARGET_HEIGHT;
     const context = canvas.getContext("2d", { alpha: false });
-    if (!context) throw new Error("Canvas processing is unavailable in this browser.");
+    if (!context) throw new Error(messages.errors.canvasUnavailable);
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, TARGET_WIDTH, TARGET_HEIGHT);
     context.drawImage(
@@ -337,17 +343,17 @@ async function correctImage() {
       YOUTUBE_THUMBNAIL_RULES,
     );
     renderChecks(result);
-    elements.correctedValue.textContent = `${TARGET_WIDTH} x ${TARGET_HEIGHT} / ${formatBytes(blob.size)} / ${Math.round(quality * 100)}% quality`;
+    elements.correctedValue.textContent = `${TARGET_WIDTH} x ${TARGET_HEIGHT} / ${formatBytes(blob.size)} / ${messages.comparison.quality(Math.round(quality * 100))}`;
     const missedSizeTarget = blob.size > YOUTUBE_THUMBNAIL_RULES.maximumBytes;
     elements.downloadButton.disabled = result.status === "fail";
     elements.fixButton.disabled = false;
     setWorkspaceState("ready");
     setStatus(
       missedSizeTarget
-        ? "Could not reach 2 MB at the minimum quality. Try a simpler image or compress it before upload."
+        ? messages.activity.sizeTargetMissed
         : result.status === "pass"
-          ? "Corrected thumbnail is ready to download."
-          : result.summary,
+          ? messages.activity.correctedReady
+          : messages.summary[result.status],
       result.status,
     );
   } catch (error) {
@@ -366,7 +372,7 @@ function downloadCorrected() {
   document.body.append(anchor);
   anchor.click();
   anchor.remove();
-  setStatus("Download started. Your original file was not changed.", "pass");
+  setStatus(messages.activity.downloadStarted, "pass");
 }
 
 function resetTool() {
@@ -375,7 +381,7 @@ function resetTool() {
   setPreviewMode("desktop");
   elements.resetButton.disabled = true;
   setWorkspaceState("empty");
-  setStatus("No image selected.");
+  setStatus(messages.activity.noImage);
 }
 
 async function createSampleFile() {
@@ -440,7 +446,7 @@ elements.sampleButton.addEventListener("click", async () => {
   clearLoadedState();
   elements.resetButton.disabled = false;
   setWorkspaceState("loading");
-  setStatus("Creating a local sample...", "neutral");
+  setStatus(messages.activity.creatingSample, "neutral");
   try {
     const file = await createSampleFile();
     if (intentId === state.requestId) await inspectFile(file);
