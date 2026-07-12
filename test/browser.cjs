@@ -104,6 +104,8 @@ function createPng(width, height, rgb = [35, 125, 80]) {
 
     const oversizedPng = Buffer.alloc(24);
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(oversizedPng, 0);
+    oversizedPng.writeUInt32BE(13, 8);
+    Buffer.from("IHDR", "ascii").copy(oversizedPng, 12);
     oversizedPng.writeUInt32BE(8000, 16);
     oversizedPng.writeUInt32BE(4000, 20);
     await page.locator("#file-input").setInputFiles({

@@ -150,7 +150,9 @@ test("reads PNG dimensions before raster decoding", () => {
   assert.equal(typeof readImageDimensionsFromBytes, "function");
   const bytes = new Uint8Array(24);
   bytes.set([137, 80, 78, 71, 13, 10, 26, 10], 0);
+  bytes.set([73, 72, 68, 82], 12);
   const view = new DataView(bytes.buffer);
+  view.setUint32(8, 13);
   view.setUint32(16, 6000);
   view.setUint32(20, 4000);
   assert.deepEqual(readImageDimensionsFromBytes(bytes, "image/png"), { width: 6000, height: 4000 });
@@ -172,4 +174,9 @@ test("rejects malformed image headers before decoding", () => {
   assert.equal(typeof readImageDimensionsFromBytes, "function");
   assert.throws(() => readImageDimensionsFromBytes(new Uint8Array([1, 2, 3]), "image/png"), /PNG header/);
   assert.throws(() => readImageDimensionsFromBytes(new Uint8Array([0xff, 0xd8, 0xff]), "image/jpeg"), /JPEG/);
+  const fakePng = new Uint8Array(24);
+  fakePng.set([137, 80, 78, 71, 13, 10, 26, 10], 0);
+  new DataView(fakePng.buffer).setUint32(16, 100);
+  new DataView(fakePng.buffer).setUint32(20, 100);
+  assert.throws(() => readImageDimensionsFromBytes(fakePng, "image/png"), /IHDR/);
 });

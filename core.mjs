@@ -130,6 +130,12 @@ function readPngDimensions(bytes) {
     throw new Error("Invalid PNG header.");
   }
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const isHeaderChunk = view.getUint32(8) === 13
+    && bytes[12] === 73
+    && bytes[13] === 72
+    && bytes[14] === 68
+    && bytes[15] === 82;
+  if (!isHeaderChunk) throw new Error("PNG header does not contain a valid IHDR chunk.");
   const width = view.getUint32(16);
   const height = view.getUint32(20);
   if (!width || !height) throw new Error("Invalid PNG dimensions.");
