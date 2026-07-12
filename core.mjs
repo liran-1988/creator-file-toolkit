@@ -164,10 +164,19 @@ function readJpegDimensions(bytes) {
     offset += 1;
     if (marker === 0xd9 || marker === 0xda) break;
     if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd8)) continue;
-    if (offset + 1 >= bytes.length) break;
+    if (offset + 1 >= bytes.length) {
+      const error = new Error("More JPEG header bytes are required.");
+      error.code = "NEED_MORE_DATA";
+      throw error;
+    }
 
     const segmentLength = (bytes[offset] << 8) | bytes[offset + 1];
-    if (segmentLength < 2 || offset + segmentLength > bytes.length) break;
+    if (segmentLength < 2) throw new Error("Invalid JPEG segment length.");
+    if (offset + segmentLength > bytes.length) {
+      const error = new Error("More JPEG header bytes are required.");
+      error.code = "NEED_MORE_DATA";
+      throw error;
+    }
     if (startOfFrameMarkers.has(marker)) {
       if (segmentLength < 7) break;
       const height = (bytes[offset + 3] << 8) | bytes[offset + 4];
@@ -178,7 +187,9 @@ function readJpegDimensions(bytes) {
     offset += segmentLength;
   }
 
-  throw new Error("Could not read JPEG dimensions from the file header.");
+  const error = new Error("More JPEG header bytes are required to find dimensions.");
+  error.code = "NEED_MORE_DATA";
+  throw error;
 }
 
 export function readImageDimensionsFromBytes(input, mimeType) {
@@ -188,4 +199,12 @@ export function readImageDimensionsFromBytes(input, mimeType) {
   if (mimeType === "image/png") return readPngDimensions(bytes);
   if (mimeType === "image/jpeg") return readJpegDimensions(bytes);
   throw new Error("Unsupported image header type.");
+}
+
+export function dimensionsMatchHeader(header, decoded, allowSwappedAxes = false) {
+  const exact = header.width === decoded.width && header.height === decoded.height;
+  const swapped = allowSwappedAxes
+    && header.width === decoded.height
+    && header.height === decoded.width;
+  return exact || swapped;
 }

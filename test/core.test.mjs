@@ -7,6 +7,7 @@ let calculateContainSize;
 let buildDownloadName;
 let actualRules;
 let readImageDimensionsFromBytes;
+let dimensionsMatchHeader;
 
 try {
   ({
@@ -15,6 +16,7 @@ try {
     calculateContainSize,
     buildDownloadName,
     readImageDimensionsFromBytes,
+    dimensionsMatchHeader,
   } = await import("../core.mjs"));
   ({ YOUTUBE_THUMBNAIL_RULES: actualRules } = await import("../rules.mjs"));
 } catch {
@@ -179,4 +181,20 @@ test("rejects malformed image headers before decoding", () => {
   new DataView(fakePng.buffer).setUint32(16, 100);
   new DataView(fakePng.buffer).setUint32(20, 100);
   assert.throws(() => readImageDimensionsFromBytes(fakePng, "image/png"), /IHDR/);
+});
+
+test("accepts EXIF-oriented JPEG dimensions that decode with swapped axes", () => {
+  assert.equal(typeof dimensionsMatchHeader, "function");
+  assert.equal(dimensionsMatchHeader({ width: 4032, height: 3024 }, { width: 3024, height: 4032 }, true), true);
+  assert.equal(dimensionsMatchHeader({ width: 4032, height: 3024 }, { width: 4032, height: 3024 }), true);
+  assert.equal(dimensionsMatchHeader({ width: 4032, height: 3024 }, { width: 3024, height: 4032 }), false);
+  assert.equal(dimensionsMatchHeader({ width: 4032, height: 3024 }, { width: 3000, height: 4000 }, true), false);
+});
+
+test("marks a truncated JPEG metadata segment as needing more header bytes", () => {
+  const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xef, 0x01, 0x00, 0x00, 0x00]);
+  assert.throws(
+    () => readImageDimensionsFromBytes(bytes, "image/jpeg"),
+    (error) => error.code === "NEED_MORE_DATA",
+  );
 });

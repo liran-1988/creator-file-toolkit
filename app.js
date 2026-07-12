@@ -1,13 +1,15 @@
 import {
   buildDownloadName,
   calculateCoverCrop,
+  dimensionsMatchHeader,
   readImageDimensionsFromBytes,
   validateThumbnail,
 } from "./core.mjs";
 import { YOUTUBE_THUMBNAIL_RULES } from "./rules.mjs";
 
 const MAX_PIXELS = 24_000_000;
-const HEADER_READ_LIMIT = 512 * 1024;
+const JPEG_HEADER_INITIAL_READ = 64 * 1024;
+const JPEG_HEADER_SCAN_LIMIT = 16 * 1024 * 1024;
 const TARGET_WIDTH = YOUTUBE_THUMBNAIL_RULES.recommendedWidth;
 const TARGET_HEIGHT = YOUTUBE_THUMBNAIL_RULES.recommendedHeight;
 
@@ -176,6 +178,33 @@ async function decodeFile(file) {
   }
 }
 
+async function readDimensionsBeforeDecode(file) {
+  if (file.type === "image/png") {
+    const bytes = new Uint8Array(await file.slice(0, 24).arrayBuffer());
+    return readImageDimensionsFromBytes(bytes, file.type);
+  }
+
+  const scanLimit = Math.min(file.size, JPEG_HEADER_SCAN_LIMIT);
+  let byteCount = Math.min(JPEG_HEADER_INITIAL_READ, scanLimit);
+  while (byteCount > 0) {
+    const bytes = new Uint8Array(await file.slice(0, byteCount).arrayBuffer());
+    try {
+      return readImageDimensionsFromBytes(bytes, file.type);
+    } catch (error) {
+      if (error.code !== "NEED_MORE_DATA") throw error;
+      if (byteCount >= scanLimit) {
+        throw new Error(
+          file.size > JPEG_HEADER_SCAN_LIMIT
+            ? "Could not find JPEG dimensions within the 16 MB metadata scan limit."
+            : "Could not read JPEG dimensions from the complete file header.",
+        );
+      }
+      byteCount = Math.min(byteCount * 2, scanLimit);
+    }
+  }
+  throw new Error("The JPEG file is empty.");
+}
+
 function showPreview(url) {
   elements.previewImage.src = url;
   elements.previewImage.hidden = false;
@@ -201,9 +230,8 @@ async function inspectFile(file) {
       throw new Error("Choose a JPEG or PNG file. Other formats are not supported by this checker yet.");
     }
 
-    const headerBytes = new Uint8Array(await file.slice(0, HEADER_READ_LIMIT).arrayBuffer());
+    const headerDimensions = await readDimensionsBeforeDecode(file);
     if (requestId !== state.requestId) return;
-    const headerDimensions = readImageDimensionsFromBytes(headerBytes, file.type);
     if (headerDimensions.width * headerDimensions.height > MAX_PIXELS) {
       throw new Error("This image is too large to decode safely. Choose an image at or below 24 megapixels.");
     }
@@ -213,7 +241,11 @@ async function inspectFile(file) {
       if (typeof source.close === "function") source.close();
       return;
     }
-    if (source.width !== headerDimensions.width || source.height !== headerDimensions.height) {
+    if (!dimensionsMatchHeader(
+      headerDimensions,
+      { width: source.width, height: source.height },
+      file.type === "image/jpeg",
+    )) {
       if (typeof source.close === "function") source.close();
       throw new Error("The decoded image dimensions do not match its file header.");
     }

@@ -1,5 +1,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const http = require("node:http");
+const path = require("node:path");
 const zlib = require("node:zlib");
 const { chromium } = require("playwright-core");
 
@@ -18,6 +20,41 @@ function resolveBrowserPath() {
     throw new Error("No supported browser found. Set BROWSER_PATH to Chrome, Edge, or Chromium.");
   }
   return browserPath;
+}
+
+async function startStaticServer() {
+  const root = path.resolve(__dirname, "..");
+  const contentTypes = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".mjs": "text/javascript; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+    ".xml": "application/xml; charset=utf-8",
+  };
+  const server = http.createServer(async (request, response) => {
+    try {
+      let pathname = decodeURIComponent(new URL(request.url, "http://127.0.0.1").pathname);
+      if (pathname.endsWith("/")) pathname += "index.html";
+      const filePath = path.resolve(root, pathname.replace(/^\/+/, ""));
+      if (filePath !== root && !filePath.startsWith(`${root}${path.sep}`)) {
+        response.writeHead(403).end("Forbidden");
+        return;
+      }
+      const content = await fs.promises.readFile(filePath);
+      response.writeHead(200, { "Content-Type": contentTypes[path.extname(filePath)] || "application/octet-stream" });
+      response.end(content);
+    } catch {
+      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("Not found");
+    }
+  });
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  const address = server.address();
+  return { server, baseUrl: `http://127.0.0.1:${address.port}` };
 }
 
 function crc32(buffer) {
@@ -63,7 +100,29 @@ function createPng(width, height, rgb = [35, 125, 80]) {
   ]);
 }
 
+async function createMetadataHeavyJpeg(page) {
+  const base64 = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 2;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#237d50";
+    context.fillRect(0, 0, 2, 2);
+    return canvas.toDataURL("image/jpeg", 0.9).split(",")[1];
+  });
+  const jpeg = Buffer.from(base64, "base64");
+  const appSegment = Buffer.alloc(65_537);
+  appSegment.set([0xff, 0xef, 0xff, 0xff], 0);
+  return Buffer.concat([
+    jpeg.subarray(0, 2),
+    ...Array.from({ length: 9 }, () => appSegment),
+    jpeg.subarray(2),
+  ]);
+}
+
 (async () => {
+  const localServer = process.env.BASE_URL ? null : await startStaticServer();
+  const baseUrl = process.env.BASE_URL || localServer.baseUrl;
   const browser = await chromium.launch({
     headless: true,
     executablePath: resolveBrowserPath(),
@@ -71,7 +130,7 @@ function createPng(width, height, rgb = [35, 125, 80]) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 
   try {
-    await page.goto(process.env.BASE_URL || "http://127.0.0.1:4174", { waitUntil: "networkidle" });
+    await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: "Try sample" }).click();
     await page.locator("#preview-image").waitFor({ state: "visible", timeout: 3000 });
     assert.equal(await page.locator("#result-status").textContent(), "Pass");
@@ -125,6 +184,13 @@ function createPng(width, height, rgb = [35, 125, 80]) {
     assert.equal(await page.locator("#results-list .check-row").count(), 4);
 
     await page.locator("#file-input").setInputFiles({
+      name: "metadata-heavy.jpg",
+      mimeType: "image/jpeg",
+      buffer: await createMetadataHeavyJpeg(page),
+    });
+    await page.locator("#original-value").filter({ hasText: "2 x 2" }).waitFor();
+
+    await page.locator("#file-input").setInputFiles({
       name: "corrupt.png",
       mimeType: "image/png",
       buffer: Buffer.from("not a png"),
@@ -138,7 +204,7 @@ function createPng(width, height, rgb = [35, 125, 80]) {
     await page.context().setOffline(false);
 
     const mobilePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
-    await mobilePage.goto(process.env.BASE_URL || "http://127.0.0.1:4174", { waitUntil: "networkidle" });
+    await mobilePage.goto(baseUrl, { waitUntil: "networkidle" });
     await mobilePage.getByRole("button", { name: "Try sample" }).click();
     await mobilePage.locator("#result-status").filter({ hasText: "Pass" }).waitFor();
     const mobileMetrics = await mobilePage.evaluate(() => ({
@@ -163,7 +229,7 @@ function createPng(width, height, rgb = [35, 125, 80]) {
       };
     });
     const racePage = await raceContext.newPage();
-    await racePage.goto(process.env.BASE_URL || "http://127.0.0.1:4174", { waitUntil: "networkidle" });
+    await racePage.goto(baseUrl, { waitUntil: "networkidle" });
     const slowLoad = racePage.locator("#file-input").setInputFiles({
       name: "slow.png",
       mimeType: "image/png",
@@ -194,6 +260,9 @@ function createPng(width, height, rgb = [35, 125, 80]) {
     await raceContext.close();
   } finally {
     await browser.close();
+    if (localServer) {
+      await new Promise((resolve) => localServer.server.close(resolve));
+    }
   }
 })().catch((error) => {
   console.error(error);
