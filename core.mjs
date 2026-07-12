@@ -64,3 +64,62 @@ export function validateThumbnail(metadata, rules) {
 
   return { status, summary, checks };
 }
+
+function assertPositiveDimensions(values) {
+  if (values.some((value) => !Number.isFinite(value) || value <= 0)) {
+    throw new RangeError("Dimensions must be positive finite numbers.");
+  }
+}
+
+export function calculateCoverCrop(sourceWidth, sourceHeight, targetWidth, targetHeight) {
+  assertPositiveDimensions([sourceWidth, sourceHeight, targetWidth, targetHeight]);
+
+  const sourceRatio = sourceWidth / sourceHeight;
+  const targetRatio = targetWidth / targetHeight;
+
+  if (Math.abs(sourceRatio - targetRatio) < Number.EPSILON * 10) {
+    return { x: 0, y: 0, width: sourceWidth, height: sourceHeight };
+  }
+
+  if (sourceRatio > targetRatio) {
+    const width = Math.round(sourceHeight * targetRatio);
+    return {
+      x: Math.round((sourceWidth - width) / 2),
+      y: 0,
+      width,
+      height: sourceHeight,
+    };
+  }
+
+  const height = Math.round(sourceWidth / targetRatio);
+  return {
+    x: 0,
+    y: Math.round((sourceHeight - height) / 2),
+    width: sourceWidth,
+    height,
+  };
+}
+
+export function calculateContainSize(sourceWidth, sourceHeight, targetWidth, targetHeight) {
+  assertPositiveDimensions([sourceWidth, sourceHeight, targetWidth, targetHeight]);
+  const scale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+  return {
+    width: Math.max(1, Math.round(sourceWidth * scale)),
+    height: Math.max(1, Math.round(sourceHeight * scale)),
+  };
+}
+
+export function buildDownloadName(originalName, extension) {
+  const cleanExtension = String(extension || "jpg")
+    .toLowerCase()
+    .replace(/^\.+/, "")
+    .replace(/[^a-z0-9]/g, "") || "jpg";
+  const baseName = String(originalName || "")
+    .replace(/\.[^.]*$/, "")
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase() || "thumbnail";
+
+  return `${baseName}-youtube-thumbnail.${cleanExtension}`;
+}

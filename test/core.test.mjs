@@ -2,9 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 let validateThumbnail;
+let calculateCoverCrop;
+let calculateContainSize;
+let buildDownloadName;
 
 try {
-  ({ validateThumbnail } = await import("../core.mjs"));
+  ({ validateThumbnail, calculateCoverCrop, calculateContainSize, buildDownloadName } = await import("../core.mjs"));
 } catch {
   // The first RED run intentionally happens before the module exists.
 }
@@ -78,4 +81,44 @@ test("fails an unsupported WebP upload", () => {
 
   assert.equal(result.status, "fail");
   assert.equal(result.checks.find((check) => check.id === "format").status, "fail");
+});
+
+test("calculates a centered 16 by 9 cover crop", () => {
+  assert.equal(typeof calculateCoverCrop, "function");
+  assert.deepEqual(calculateCoverCrop(1600, 1200, 1280, 720), {
+    x: 0,
+    y: 150,
+    width: 1600,
+    height: 900,
+  });
+});
+
+test("keeps an exact 16 by 9 source intact", () => {
+  assert.equal(typeof calculateCoverCrop, "function");
+  assert.deepEqual(calculateCoverCrop(1920, 1080, 1280, 720), {
+    x: 0,
+    y: 0,
+    width: 1920,
+    height: 1080,
+  });
+});
+
+test("calculates contained dimensions without upscaling past the target", () => {
+  assert.equal(typeof calculateContainSize, "function");
+  assert.deepEqual(calculateContainSize(1000, 1000, 1280, 720), {
+    width: 720,
+    height: 720,
+  });
+});
+
+test("rejects non-positive geometry inputs", () => {
+  assert.equal(typeof calculateCoverCrop, "function");
+  assert.throws(() => calculateCoverCrop(0, 720, 1280, 720), RangeError);
+  assert.throws(() => calculateContainSize(1280, -1, 1280, 720), RangeError);
+});
+
+test("builds a safe deterministic download name", () => {
+  assert.equal(typeof buildDownloadName, "function");
+  assert.equal(buildDownloadName("My Great Thumb!!.PNG", "jpg"), "my-great-thumb-youtube-thumbnail.jpg");
+  assert.equal(buildDownloadName("", ".png"), "thumbnail-youtube-thumbnail.png");
 });
