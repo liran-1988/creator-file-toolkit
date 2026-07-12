@@ -18,17 +18,18 @@ Open `http://127.0.0.1:4174`.
 
 ## Test
 
-Pure logic and static page contracts use Node's built-in test runner:
+Install the pinned browser-test dependency, then run the complete suite:
 
 ```powershell
-node --test test/*.test.mjs
+npm install
+npm run test:all
 ```
 
-The browser workflow test uses Playwright and an installed Chromium-based browser:
+The browser workflow test uses `playwright-core` and an installed Chromium-based browser. Set `BROWSER_PATH` when Edge is not installed in a standard Windows location:
 
 ```powershell
-$env:NODE_PATH="<path-to-node_modules>"
-node test/browser.cjs
+$env:BROWSER_PATH="C:\path\to\chrome.exe"
+npm run test:browser
 ```
 
 ## Rules

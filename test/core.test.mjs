@@ -6,9 +6,16 @@ let calculateCoverCrop;
 let calculateContainSize;
 let buildDownloadName;
 let actualRules;
+let readImageDimensionsFromBytes;
 
 try {
-  ({ validateThumbnail, calculateCoverCrop, calculateContainSize, buildDownloadName } = await import("../core.mjs"));
+  ({
+    validateThumbnail,
+    calculateCoverCrop,
+    calculateContainSize,
+    buildDownloadName,
+    readImageDimensionsFromBytes,
+  } = await import("../core.mjs"));
   ({ YOUTUBE_THUMBNAIL_RULES: actualRules } = await import("../rules.mjs"));
 } catch {
   // The first RED run intentionally happens before the module exists.
@@ -137,4 +144,32 @@ test("builds a safe deterministic download name", () => {
   assert.equal(typeof buildDownloadName, "function");
   assert.equal(buildDownloadName("My Great Thumb!!.PNG", "jpg"), "my-great-thumb-youtube-thumbnail.jpg");
   assert.equal(buildDownloadName("", ".png"), "thumbnail-youtube-thumbnail.png");
+});
+
+test("reads PNG dimensions before raster decoding", () => {
+  assert.equal(typeof readImageDimensionsFromBytes, "function");
+  const bytes = new Uint8Array(24);
+  bytes.set([137, 80, 78, 71, 13, 10, 26, 10], 0);
+  const view = new DataView(bytes.buffer);
+  view.setUint32(16, 6000);
+  view.setUint32(20, 4000);
+  assert.deepEqual(readImageDimensionsFromBytes(bytes, "image/png"), { width: 6000, height: 4000 });
+});
+
+test("reads JPEG dimensions before raster decoding", () => {
+  assert.equal(typeof readImageDimensionsFromBytes, "function");
+  const bytes = new Uint8Array([
+    0xff, 0xd8,
+    0xff, 0xe0, 0x00, 0x04, 0x00, 0x00,
+    0xff, 0xc0, 0x00, 0x11, 0x08, 0x08, 0x70, 0x0f, 0x00,
+    0x03, 0x01, 0x11, 0x00, 0x02, 0x11, 0x00, 0x03, 0x11, 0x00,
+    0xff, 0xd9,
+  ]);
+  assert.deepEqual(readImageDimensionsFromBytes(bytes, "image/jpeg"), { width: 3840, height: 2160 });
+});
+
+test("rejects malformed image headers before decoding", () => {
+  assert.equal(typeof readImageDimensionsFromBytes, "function");
+  assert.throws(() => readImageDimensionsFromBytes(new Uint8Array([1, 2, 3]), "image/png"), /PNG header/);
+  assert.throws(() => readImageDimensionsFromBytes(new Uint8Array([0xff, 0xd8, 0xff]), "image/jpeg"), /JPEG/);
 });

@@ -23,6 +23,7 @@ test("page contains labeled upload, preview, correction, and reset controls", as
     'id="file-input"',
     'id="drop-zone"',
     'id="preview-image"',
+    'id="placement-stage"',
     'id="results-list"',
     'id="fix-button"',
     'id="download-button"',
@@ -64,9 +65,16 @@ test("repository includes public documentation and discovery files", async () =>
     readProjectFile("404.html"),
   ]);
   assert.match(readme, /processed locally/i);
-  assert.match(readme, /node --test/);
+  assert.match(readme, /npm run test:all/);
   assert.match(license, /MIT License/);
   assert.match(robots, /Sitemap: https:\/\/liran-1988\.github\.io\/creator-file-toolkit\/sitemap\.xml/);
   assert.match(sitemap, /https:\/\/liran-1988\.github\.io\/creator-file-toolkit\//);
   assert.match(notFound, /Back to thumbnail checker/);
+});
+
+test("repository declares reproducible unit and browser test commands", async () => {
+  const packageJson = await readProjectFile("package.json");
+  assert.match(packageJson, /"test:browser"/);
+  assert.match(packageJson, /"test:all"/);
+  assert.match(packageJson, /"playwright-core"/);
 });

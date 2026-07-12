@@ -62,16 +62,26 @@
                 </div>
               </div>
 
-              <div class="preview-frame" id="preview-frame" data-mode="desktop">
-                <div class="preview-empty" id="preview-empty">
-                  <strong>Your thumbnail appears here</strong>
-                  <span>Use the sample or select an image.</span>
+              <div class="placement-stage" id="placement-stage" data-mode="desktop">
+                <div class="preview-frame" id="preview-frame" data-mode="desktop">
+                  <div class="preview-empty" id="preview-empty">
+                    <strong>Your thumbnail appears here</strong>
+                    <span>Use the sample or select an image.</span>
+                  </div>
+                  <img id="preview-image" alt="Selected thumbnail preview" hidden>
+                  <div class="safe-overlay" id="safe-overlay" aria-hidden="true">
+                    <span class="duration-chip">12:34</span>
+                    <span class="menu-dots">...</span>
+                    <span class="safe-label">Approximate UI area</span>
+                  </div>
                 </div>
-                <img id="preview-image" alt="Selected thumbnail preview" hidden>
-                <div class="safe-overlay" id="safe-overlay" aria-hidden="true">
-                  <span class="duration-chip">12:34</span>
-                  <span class="menu-dots">...</span>
-                  <span class="safe-label">Approximate UI area</span>
+                <div class="placement-context" aria-hidden="true">
+                  <span class="channel-avatar"></span>
+                  <span class="placement-copy">
+                    <strong>Video title preview</strong>
+                    <span>Channel name · placement preview</span>
+                  </span>
+                  <span class="context-menu">...</span>
                 </div>
               </div>
               <p class="preview-note">Placement overlays are approximate previews, not official upload constraints.</p>
